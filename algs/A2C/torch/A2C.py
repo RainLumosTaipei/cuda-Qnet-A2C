@@ -9,7 +9,7 @@ class A2C:
     
     __hidden_size = 256  # 隐藏层大小
     __lr          = 1e-3 # 学习率
-    __num_steps   = 5
+    __num_steps   = 10
     __max_frames   = 500  # 总训练次数
 
     
@@ -105,9 +105,9 @@ class A2C:
             # 计算折扣累积回报
             returns = self._compute_returns(next_value, rewards, masks)
             
-            log_probs = torch.cat(log_probs)
+            log_probs = torch.cat(log_probs).view(-1, 1)
             returns   = torch.cat(returns).detach()
-            values    = torch.cat(values)
+            values    = torch.cat(values).view(-1, 1)
 
             # 优势函数：回报与价值估计的差值
             advantage = returns - values

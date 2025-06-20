@@ -162,7 +162,7 @@ class ActorCritic():
         # )
 
     def actor_forward(self, batch_size, input_ptr):
-        # n x c
+        # n actor_input c
         output_ptr = (ctypes.c_float * (batch_size * self.actor.output_dim))()
         self.actor.hidden = np.zeros(batch_size * self.actor.hidden_dim, dtype=np.float32)
 
@@ -175,7 +175,7 @@ class ActorCritic():
             *self.actor.para_ptr()
         )
 
-        # n x c
+        # n actor_input c
         output = [
             [output_ptr[i * self.actor.output_dim + j] for j in range(self.actor.output_dim)]  # c
             for i in range(batch_size)  # n
@@ -183,7 +183,7 @@ class ActorCritic():
         return output[0] if batch_size == 1 else output
 
     def critic_forward(self, batch_size, input_ptr):
-        # n x c
+        # n actor_input c
         output_ptr = (ctypes.c_float * (batch_size * self.critic.output_dim))()
         self.critic.hidden = np.zeros(batch_size * self.critic.hidden_dim, dtype=np.float32)
 
@@ -196,7 +196,7 @@ class ActorCritic():
             *self.critic.para_ptr()
         )
 
-        # n x c
+        # n actor_input c
         output = [
             [output_ptr[i * self.critic.output_dim + j] for j in range(self.critic.output_dim)]  # c
             for i in range(batch_size)  # n
@@ -211,8 +211,15 @@ class ActorCritic():
         value = self.critic_forward(batch_size, input_ptr)
         probs = self.actor_forward(batch_size, input_ptr)
 
+        if any(np.isnan(probs)):
+            # 处理NaN值，例如使用均匀分布作为回退
+            probs = np.ones_like(probs) / len(probs)
+
+        # 确保概率值在有效范围内
+        probs = np.clip(probs, 1e-8, 1.0 - 1e-8)  # 防止极端值
+
         dist = Categorical(torch.tensor(probs))
-        return dist, value  # 预估值，动作概率
+        return dist, value, probs  # 预估值，动作概率
 
     def actor_backward(self, batch_size, input_ptr, output_ptr, grad_output_ptr):
 
@@ -240,16 +247,15 @@ class ActorCritic():
         )
 
 
-    def backward(self, x, y, actor_loss, critic_loss):
-        x = x if isinstance(x[0], list) else [x]  # n x a
-        batch_size = len(x)  # n
-        input_ptr = list_to_float_ptr(x)
-        output_ptr = list_to_float_ptr(y)
-        actor_loss = actor_loss[:len(y)]
+    def backward(self, actor_input, actor_output, actor_loss, critic_loss):
+        actor_input = actor_input if isinstance(actor_input[0], list) else [actor_input]  # n actor_input a
+        batch_size = len(actor_input)  # n
+        input_ptr = list_to_float_ptr(actor_input)
+        output_ptr = list_to_float_ptr(actor_output)
         actor_loss_ptr = list_to_float_ptr(actor_loss)
+        critic_loss_ptr = list_to_float_ptr(critic_loss)
 
         self.actor_backward(batch_size, input_ptr, output_ptr, actor_loss_ptr)
-        critic_loss_ptr = ctypes.c_float(critic_loss)
         self.critic_backward(batch_size, input_ptr, critic_loss_ptr)
 
         return

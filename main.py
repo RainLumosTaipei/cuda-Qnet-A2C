@@ -16,7 +16,7 @@ def setRandomSeed(env):
     
 def main():
     
-    model_type = 2
+    model_type = 1
     device_type = 0
     
     cpu_device = torch.device('cpu')
@@ -37,14 +37,19 @@ def main():
     # A2C
     # pytorch gpu
     # 500 train executed in 17201.75 ms
+    # 5000 train executed in 169033.93 ms
+    # 50000 train executed in 1830877.91 ms
     if model_type == 1 and device_type==0:
         A2C_pytorch(state_dim, action_dim, gpu_device, env).train()
     # pytorch cpu
     # 500 train executed in 9336.46 ms
+    # 5000 train executed in 98004.05 ms
+    # 50000 train executed in 1145153.47 ms
     elif model_type == 1 and device_type == 1:
         A2C_pytorch(state_dim, action_dim, cpu_device, env).train()
     # cuda gpu
     # 500 train executed in 17737.08 ms
+    # 5000 train executed in 177677.20 ms
     elif model_type == 2 and device_type==0:
         A2C_cuda(state_dim, action_dim, gpu_device, env).train()
 
@@ -60,6 +65,7 @@ def main():
         DQN_pytorch(state_dim, action_dim, cpu_device, env).train()
     # cuda gpu
     # 100 train executed in 18613.35 ms
+    # 500 train executed in 156805.65 ms
     else:
         DQN_cuda(state_dim, action_dim, gpu_device, env).train()
 

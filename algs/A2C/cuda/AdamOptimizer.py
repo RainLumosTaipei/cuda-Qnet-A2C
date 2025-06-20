@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 class AdamOptimizer:
     """纯Python实现的Adam优化器"""
@@ -56,6 +57,16 @@ class AdamOptimizer:
 
                     m_hat = self.m[layer_idx][0][i][j] / (1 - self.beta1**self.t)
                     v_hat = self.v[layer_idx][0][i][j] / (1 - self.beta2**self.t)
+
+                    # 数值稳定性检查
+                    if v_hat < 0:
+                        v_hat = 1e-8  # 设置为小正数
+
+                    if np.isnan(m_hat) or np.isinf(m_hat):
+                        m_hat = 0.0
+
+                    if np.isnan(v_hat) or np.isinf(v_hat):
+                        v_hat = 1e-8  # 设置为小正数
 
                     params[layer_idx][0][i][j] -= (
                         self.lr * m_hat / (math.sqrt(v_hat) + self.eps)
